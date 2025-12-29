@@ -1,230 +1,203 @@
-from collections import defaultdict
+import argparse
+import sys
+import time
 import re
+import random
+from collections import defaultdict
+
 import pandas as pd
 import numpy as np
-import sys
-import os
-import colorsys
+from openpyxl import Workbook
 from openpyxl.styles import PatternFill
-import argparse
-import multiprocessing
-from multiprocessing import shared_memory
+
+from joblib import Parallel, delayed
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import connected_components
 from numba import njit
-import time
+
 
 @njit
-def slope_distance_numba(row1, row2):
+def slope_distance(row1, row2):
     v = row1 - row2
     v_sorted = np.sort(v)
     n = len(v_sorted)
-    distance = 0
+    distance = 0.0
     for k in range(n):
         distance += (2 * k - n + 1) * v_sorted[k]
     return 2.0 * distance
 
-def generate_unique_colors(num_clusters):
-    colors = []
-    for i in range(num_clusters):
-        hue = (0.618033988749895 * i) % 1.0
-        saturation = 0.5 + (0.5 * (i % 2))
-        value = 0.7 + (0.3 * ((i // 2) % 2))
-        rgb = colorsys.hsv_to_rgb(hue, saturation, value)
-        hex_color = ''.join([f'{int(x * 255):02X}' for x in rgb])
-        colors.append(hex_color)
-    return colors
 
-def extract_numeric_suffix(name: str) -> int:
-    if isinstance(name, bytes):
-        name = name.decode('utf-8', errors='ignore')
-    else:
-        name = str(name)
-    match = re.search(r'(\d+)$', name)
-    if match:
-        return int(match.group(1))
-    return 0
-
-def process_row_shared(args):
-    shm_name, shape, dtype, data_global, core_id, total_cores, threshold = args
-    
-    existing_shm = shared_memory.SharedMemory(name=shm_name)
-    dist_matrix = np.ndarray(shape, dtype=dtype, buffer=existing_shm.buf)
-    
-    n = shape[0]
-    local_uf_edges = [] 
-
-    for i in range(core_id, n, total_cores):
-        row_i = data_global[i]
-        for j in range(i + 1, n):
-            dist = slope_distance_numba(row_i, data_global[j])
-            
-            dist_matrix[i, j] = dist
-            dist_matrix[j, i] = dist
-            
-            if dist < threshold:
-                local_uf_edges.append((i, j))
-                
-    existing_shm.close()
-    return local_uf_edges
-
-def parallel_slope_distance_shared(df_values, threshold):
-    n, m = df_values.shape
-    
+def extract_numeric_suffix(name):
     try:
-        shm = shared_memory.SharedMemory(create=True, size=n * n * 8)
-    except OSError:
-        print("Error: Memory allocation failed.")
-        sys.exit(1)
+        return int(re.findall(r'\d+', str(name))[-1])
+    except (IndexError, ValueError, TypeError):
+        return 0
 
-    shared_matrix = np.ndarray((n, n), dtype=np.float64, buffer=shm.buf)
-    shared_matrix.fill(0.0)
 
-    cpu_core_count = os.cpu_count() or 4
-    
-    args_list = []
-    for core_id in range(cpu_core_count):
-        args_list.append((
-            shm.name, (n, n), np.float64, 
-            df_values,
-            core_id, 
-            cpu_core_count, 
-            threshold
-        ))
+def calculate_row_edges(i, data_matrix, threshold):
+    n = data_matrix.shape[0]
+    row_i = data_matrix[i]
+    edges = []
 
-    uf = UnionFind(n)
-    with multiprocessing.Pool(cpu_core_count) as pool:
-        all_edges_lists = pool.map(process_row_shared, args_list)
+    for j in range(i + 1, n):
+        dist = slope_distance(row_i, data_matrix[j])
+        if dist < threshold:
+            edges.append((i, j, dist))
 
-    for edges in all_edges_lists:
-        for i, j in edges:
-            uf.union(i, j)
+    return edges
 
-    final_matrix = shared_matrix.copy()
 
-    shm.close()
-    shm.unlink()
+def get_clusters(data_matrix, threshold):
+    n = data_matrix.shape[0]
+    print(f"Calculating distances for {n} items using parallel processing...")
 
-    return final_matrix, uf
+    results = Parallel(n_jobs=-1, backend='loky')(
+        delayed(calculate_row_edges)(i, data_matrix, threshold)
+        for i in range(n)
+    )
 
-class UnionFind:
-    def __init__(self, n):
-        self.parent = np.arange(n, dtype=np.int32)
-        self.rank = np.zeros(n, dtype=np.int8)
+    all_edges = [edge for row_res in results for edge in row_res]
 
-    def find(self, x):
-        if self.parent[x] != x:
-            self.parent[x] = self.find(self.parent[x])
-        return self.parent[x]
+    rows = [e[0] for e in all_edges]
+    cols = [e[1] for e in all_edges]
+    data = [1] * len(all_edges)
 
-    def union(self, x, y):
-        root_x, root_y = self.find(x), self.find(y)
-        if root_x == root_y:
-            return
-        if self.rank[root_x] < self.rank[root_y]:
-            root_x, root_y = root_y, root_x
-        self.parent[root_y] = root_x
-        if self.rank[root_x] == self.rank[root_y]:
-            self.rank[root_x] += 1
+    graph = csr_matrix((data, (rows, cols)), shape=(n, n))
 
-def check_blank(data, file_name):
-    if data.iloc[:, 0].isnull().any():
-        raise ValueError(f"Blank row in '{file_name}'")
+    n_components, labels = connected_components(csgraph=graph, directed=False, return_labels=True)
 
-def check_duplicate(data, file_name):
-    if data.iloc[:, 0].duplicated().any():
-        raise ValueError(f"Duplicate object in '{file_name}'")
+    dist_matrix_out = np.zeros((n, n))
+    for i, j, d in all_edges:
+        dist_matrix_out[i, j] = d
+        dist_matrix_out[j, i] = d
+
+    return dist_matrix_out, labels
+
+
+def check_data_integrity(df, filename):
+    if df.iloc[:, 0].isnull().any():
+        raise ValueError(f"Found blank rows in '{filename}'")
+    if df.iloc[:, 0].duplicated().any():
+        raise ValueError(f"Found duplicate identifiers in '{filename}'")
+
 
 def min_max_scale(x):
-    x_min, x_max = x.min(), x.max()
-    return (x - x_min) / (x_max - x_min) if x_max != x_min else x * 0
+    diff = x.max() - x.min()
+    if diff == 0:
+        return x * 0
+    return (x - x.min()) / diff
 
-def save_colored_network(dist_matrix, groups, threshold, output_file, names):
-    colors = generate_unique_colors(len(groups))
-    group_list = list(groups.items())
-    group_list.sort(key=lambda x: min(extract_numeric_suffix(m) for m in x[1]))
-    new_order = []
-    for _, members in group_list:
-        members.sort(key=lambda x: extract_numeric_suffix(x))
-        new_order.extend(members)
-    
-    if not isinstance(dist_matrix, pd.DataFrame):
-        dist_matrix = pd.DataFrame(dist_matrix, index=names, columns=names)
-        
-    df_dist = dist_matrix.loc[new_order, new_order]
+
+def get_color_list(n):
+    presets = [
+        "FFB6C1", "87CEFA", "90EE90", "F0E68C", "D3D3D3", "FFA07A",
+        "20B2AA", "9370DB", "FF6347", "FFD700", "B0C4DE", "FFDEAD"
+    ]
+
+    colors = presets[:]
+    while len(colors) < n:
+        colors.append("".join([random.choice('89ABCDEF') for _ in range(6)]))
+    return colors
+
+
+def save_excel(dist_matrix, groups, threshold, output_file, names):
+    print("Saving results to Excel...")
+
+    group_items = sorted(groups.items(), key=lambda x: min(extract_numeric_suffix(n) for n in x[1]))
+
+    new_order_indices = []
+    name_to_idx = {name: i for i, name in enumerate(names)}
+
+    for _, members in group_items:
+        members.sort(key=extract_numeric_suffix)
+        for m in members:
+            if m in name_to_idx:
+                new_order_indices.append(name_to_idx[m])
+
+    df_dist = pd.DataFrame(dist_matrix, index=names, columns=names)
+    df_dist = df_dist.iloc[new_order_indices, new_order_indices]
+
+    colors = get_color_list(len(groups))
 
     with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-        df_dist.to_excel(writer, sheet_name='Distance Matrix', index=True)
-        worksheet = writer.book['Distance Matrix']
-        
+        df_dist.to_excel(writer, sheet_name='Clustering', index=True)
+        ws = writer.book['Clustering']
+
         fills = [PatternFill(start_color=c, end_color=c, fill_type='solid') for c in colors]
-        
-        name_to_idx = {name: i for i, name in enumerate(df_dist.index)}
-        
-        for group_idx, (_, members) in enumerate(groups.items()):
-            if len(members) < 2: continue
+
+        excel_name_to_idx = {name: i for i, name in enumerate(df_dist.index)}
+
+        for group_idx, (_, members) in enumerate(group_items):
+            if len(members) < 2:
+                continue
+
             fill = fills[group_idx % len(fills)]
-            
+
             for member in members:
-                if member not in name_to_idx: continue
-                r_idx = name_to_idx[member] + 2
-                
-                worksheet.cell(row=r_idx, column=1).fill = fill
-                
-                member_idx_in_matrix = name_to_idx[member]
+                if member not in excel_name_to_idx: continue
+
+                r = excel_name_to_idx[member] + 2
+
+                ws.cell(row=r, column=1).fill = fill
+
+                member_idx_orig = name_to_idx[member]
+
                 for other in members:
-                    if other == member: continue
-                    if other not in name_to_idx: continue
-                    
-                    other_idx_in_matrix = name_to_idx[other]
-                    val = df_dist.iloc[member_idx_in_matrix, other_idx_in_matrix]
-                    
+                    if member == other: continue
+                    if other not in excel_name_to_idx: continue
+
+                    other_idx_orig = name_to_idx[other]
+                    val = dist_matrix[member_idx_orig, other_idx_orig]
+
                     if val < threshold:
-                        c_idx = name_to_idx[other] + 2
-                        worksheet.cell(row=r_idx, column=c_idx).fill = fill
+                        c = excel_name_to_idx[other] + 2
+                        ws.cell(row=r, column=c).fill = fill
+
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input', required=True)
-    parser.add_argument('-o', '--output', required=True)
-    parser.add_argument('-t', '--threshold', type=float)
+    parser = argparse.ArgumentParser(description="Cluster Analysis Tool")
+    parser.add_argument('-i', '--input', required=True, help="Input CSV file")
+    parser.add_argument('-o', '--output', required=True, help="Output Excel file")
+    parser.add_argument('-t', '--threshold', type=float, help="Clustering threshold")
     args = parser.parse_args()
 
     try:
-        col_num = len(pd.read_csv(args.input, header=None).columns)
-        df = pd.read_csv(args.input, header=None, dtype={i: float for i in range(1, col_num)})
+        preview = pd.read_csv(args.input, header=None, nrows=1)
+        col_num = len(preview.columns)
+
+        df = pd.read_csv(args.input, header=None)
+
+        check_data_integrity(df, args.input)
+
+        names = df.iloc[:, 0].values
+        df_values = df.iloc[:, 1:].astype(float).apply(min_max_scale, axis=1)
+        data_matrix = df_values.to_numpy()
+
         threshold = args.threshold if args.threshold is not None else (col_num - 2)
         print(f"Using threshold: {threshold}")
 
-        names = df.iloc[:, 0].values
-        df_values = df.iloc[:, 1:]
-        check_blank(df, args.input)
-        check_duplicate(df, args.input)
-        df_values = df_values.apply(min_max_scale, axis=1)
-        
-        data_matrix = df_values.to_numpy(dtype=np.float64)
+        dist_matrix, labels = get_clusters(data_matrix, threshold)
 
-        dist_matrix, uf = parallel_slope_distance_shared(data_matrix, threshold)
+        groups = defaultdict(list)
+        for idx, label in enumerate(labels):
+            groups[label].append(names[idx])
 
-        n = data_matrix.shape[0]
-        groups_dict = defaultdict(list)
-        for i in range(n):
-            root = uf.find(i)
-            groups_dict[root].append(names[i])
+        save_excel(dist_matrix, groups, threshold, args.output, names)
 
-        save_colored_network(dist_matrix, groups_dict, threshold=threshold, output_file=args.output, names=names)
-
-        print("\nClustering Results:")
-        for i, (key, group) in enumerate(groups_dict.items(), 1):
-            if len(group) >= 2:
-                print(f"Cluster {i}: {len(group)} members")
+        print("\nSummary:")
+        valid_groups = [g for g in groups.values() if len(g) >= 2]
+        print(f"Found {len(valid_groups)} clusters with >= 2 members.")
+        for i, g in enumerate(valid_groups, 1):
+            print(f"  Cluster {i}: {len(g)} members")
 
     except Exception as e:
+        print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
 
+
 if __name__ == "__main__":
-    start = time.perf_counter()
-    multiprocessing.freeze_support()
+    start_time = time.perf_counter()
     main()
-    end = time.perf_counter()
-    print(f"Time: {end - start:.4f}s")
+    print(f"Total time: {time.perf_counter() - start_time:.2f}s")
