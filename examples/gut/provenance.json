@@ -1,0 +1,26 @@
+{
+  "dataset": "Yatsunenko et al., Human gut microbiome viewed across age and geography (2012)",
+  "source_bundle_directory": "Data and Result/nature/2/Amerindians",
+  "processing": "Byte-for-byte copies of author-supplied analysis inputs; filenames changed; values unchanged.",
+  "layout": "Headerless CSV: sample ID followed by 1414 shared OTU relative abundances.",
+  "files": {
+    "amerindian_baby.csv": {
+      "source_filename": "input_2_A_Baby.csv",
+      "samples": 32,
+      "otus": 1414,
+      "sha256": "c7f2d2b277a3e4b5830a65dc08ab3c9fb7cf1da79ee59cfd1eb80ec811c5b669"
+    },
+    "amerindian_child.csv": {
+      "source_filename": "input_2_A_Child.csv",
+      "samples": 33,
+      "otus": 1414,
+      "sha256": "2e6518340726f89ca45b218bb933a594bba5a5aade319114740c666b2b7f593e"
+    },
+    "amerindian_adult.csv": {
+      "source_filename": "input_2_A_Adult.csv",
+      "samples": 35,
+      "otus": 1414,
+      "sha256": "5cb6a709dad0cdc31683e8ea346b1027a3259bc3dd0dc55b599d94c109b71dd4"
+    }
+  }
+}

@@ -1,0 +1,2 @@
+# Preserve the author input bytes recorded in examples/gut/provenance.json.
+examples/gut/*.csv -text whitespace=cr-at-eol
