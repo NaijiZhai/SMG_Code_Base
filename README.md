@@ -28,24 +28,30 @@ pip install -r requirement.txt
 python smg_clean.py -c counts.csv -g groups.csv -o cleaned
 python DAA-11-05.py -in1 cleaned/input_A.csv -in2 cleaned/input_B.csv -o daa.csv
 python smg_clean.py -c counts.csv -g groups_A.csv -o cleaned_A
-python cluster-11-05.py -i cleaned_A/input_A.csv -o clusters_A
+python cluster-11-05.py -i cleaned_A/input_A.csv -o clusters_A.xlsx
 python BDA-09-03.py -i samples.csv -o distances.xlsx
 ```
+
+> [!IMPORTANT]
+> **For large data sets, `--format binary` is highly recommended.** Clustering and BDA write Excel workbooks by
+> default, which hold every pairwise distance and become very slow and memory-hungry with thousands of OTUs or
+> samples. Binary output writes the network and clusters (clustering) or the distance matrix (BDA) to a result
+> directory in a fraction of the time.
 
 - `smg_clean.py` takes a count table (OTU IDs in the first column, sample IDs in the header row) and a group table
   (columns `sample` and `group`). It writes one `input_<group>.csv` per group, with one row per OTU and no header, and
   a `filter_report.csv`. All groups to be compared are filtered together (`groups.csv`); a group to be clustered is
   filtered on its own (`groups_A.csv` lists only group A). `--layout samples` writes one row per sample, as BDA needs.
 - `DAA-11-05.py` writes the number of changed edges, then every OTU with the number of changed edges it belongs to.
-- `cluster-11-05.py` writes a folder with the edges (`edges.csv`), the cluster of every OTU (`clusters.csv`) and the
-  threshold. `-o clusters.xlsx --format excel` writes an Excel workbook instead, with the distance matrix colored by
-  cluster.
+- `cluster-11-05.py` writes an Excel workbook with the distance matrix colored by cluster, plus the `Threshold` and
+  `Standard OTU` sheets. For large networks, `--format binary -o clusters_A` writes a folder with `edges.csv`,
+  `clusters.csv` and threshold diagnostics. Add `--distances` in binary mode to also save `distances.npy` and `ids.csv`.
 - `BDA-09-03.py` writes the distance matrix between the samples to an Excel workbook. For large sample sets,
   `--format binary -o bda_result` is faster: it writes `distances.npy`, with the sample order in `ids.csv`.
 - Input CSVs for DAA, clustering and BDA have no header row. The first column contains OTU IDs for DAA and clustering,
 or sample IDs for BDA. All BDA samples must use the same OTU set in the same column order.
 
-Use a separate output folder for each analysis.
+For binary output, use a separate result directory for each analysis.
 
 ## Example of use
 
@@ -69,7 +75,7 @@ With `input_567.csv` as the second file the result is 1,991; the rhizosphere sam
 
 ```bash
 python smg_clean.py -c examples/raw/wang_otu_counts.csv -g examples/groups/root_WT.csv -o examples/output/root_WT
-python cluster-11-05.py -i examples/output/root_WT/input_WT.csv -o examples/output/cluster_WT
+python cluster-11-05.py -i examples/output/root_WT/input_WT.csv -o examples/output/cluster_WT.xlsx
 ```
 
 The 536 OTUs that pass the filter form 21 clusters with at least two OTUs.

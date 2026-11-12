@@ -59,10 +59,10 @@ def add_network_arguments(parser):
                         help='Normalize each sample column to relative abundance before row min-max')
 
 
-def add_output_arguments(parser, clustering=False, default_format='binary'):
+def add_output_arguments(parser, clustering=False):
     parser.add_argument('-o', '--output', required=True, help='Output directory (binary) or .xlsx file (excel)')
-    parser.add_argument('--format', choices=('binary', 'excel'), default=default_format,
-                        help=f'Output format: binary result directory or Excel workbook (default: {default_format})')
+    parser.add_argument('--format', choices=('binary', 'excel'), default='excel',
+                        help='Output format: binary result directory or Excel workbook (default: excel)')
     if clustering:
         parser.add_argument('--distances', action='store_true',
                             help='Also save a full distances.npy matrix in binary mode; Excel always includes distances')

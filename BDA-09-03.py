@@ -10,7 +10,7 @@ from smg_output import write_binary_distances, write_distances
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Sample-to-sample beta difference analysis')
     parser.add_argument('-i', '--input', required=True, help='Input CSV file')
-    add_output_arguments(parser, default_format='excel')
+    add_output_arguments(parser)
     args = parser.parse_args(argv)
     try:
         validate_output(args.output, args.format)
