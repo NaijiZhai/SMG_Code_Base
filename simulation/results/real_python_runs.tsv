@@ -1,0 +1,41 @@
+series	tool	rows	samples	samples2	runs	seconds_median	seconds_min	peak_rss_gb	daa_edges	same_as_package
+genes	cluster	10	24		5	0.3779	0.376	0.145		
+genes	daa	10	24	23	5	0.3744	0.3729	0.145	2	
+genes	cluster	20	24		5	0.3917	0.3778	0.146		
+genes	daa	20	24	23	5	0.4292	0.4178	0.147	10	
+genes	cluster	40	24		5	0.3908	0.3845	0.146		
+genes	daa	40	24	23	5	0.3832	0.377	0.146	29	
+genes	cluster	80	24		5	0.3831	0.3789	0.147		
+genes	daa	80	24	23	5	0.381	0.3773	0.148	75	
+genes	cluster	160	24		5	0.3932	0.3901	0.146		
+genes	daa	160	24	23	5	0.3794	0.3769	0.147	209	
+genes	cluster	320	24		5	0.4288	0.4235	0.148		
+genes	daa	320	24	23	5	0.3852	0.3796	0.149	719	
+genes	cluster	640	24		5	0.5865	0.5773	0.152		
+genes	daa	640	24	23	5	0.4075	0.4016	0.153	2990	
+genes	cluster	1280	24		5	1.1155	1.1053	0.165		
+genes	daa	1280	24	23	5	0.43	0.429	0.163	11319	
+genes	cluster	2560	24		3	3.2073	3.1631	0.213		
+genes	daa	2560	24	23	5	0.4851	0.4782	0.19	45061	
+genes	cluster	5120	24		3	11.5559	11.5208	0.397		
+genes	daa	5120	24	23	5	0.7856	0.7841	0.275	176550	
+genes	cluster	10240	24		1	45.5676	45.5676	1.123		
+genes	daa	10240	24	23	5	1.6099	1.6063	0.622	610947	
+genes	cluster	16249	24		1	113.3518	113.3518	2.569		
+genes	daa	16249	24	23	3	3.3419	3.2823	1.296	1187039	True
+cells	cluster	536	6		5	0.4993	0.4852	0.15		
+cells	cluster	536	12		5	0.502	0.492	0.148		
+cells	cluster	536	24		5	0.513	0.5042	0.149		
+cells	cluster	536	48		5	0.5233	0.5079	0.149		
+cells	cluster	536	96		5	0.55	0.5409	0.154		
+cells	cluster	536	192		5	0.6005	0.5945	0.156		
+cells	cluster	536	384		5	0.7179	0.7097	0.167		
+cells	cluster	536	768		5	0.9712	0.9606	0.186		
+cells	cluster	536	1536		5	1.5128	1.5096	0.252		
+cells	cluster	536	3072		3	2.6862	2.6738	0.268		
+cells	cluster	536	6144		3	5.2974	5.189	0.361		
+cells	cluster	536	12288		3	10.7753	10.538	0.522		
+cells	cluster	536	24576		1	22.5474	22.5474	0.858		
+cells	cluster	536	49152		1	48.4001	48.4001	1.769		
+cells	cluster	536	68579		1	71.7862	71.7862	3.063		
+ref	cluster	536	136		5	0.6016	0.5943	0.157		

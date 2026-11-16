@@ -1,2 +1,2 @@
-# Preserve the author input bytes recorded in examples/gut/provenance.json.
-examples/gut/*.csv -text whitespace=cr-at-eol
+# Keep the paper_data files byte for byte, as the scripts write them.
+paper_data/** -text whitespace=cr-at-eol

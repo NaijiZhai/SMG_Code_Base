@@ -1,4 +1,11 @@
 .venv/
 __pycache__/
 *.py[cod]
-examples/output/
+output/
+.DS_Store
+simulation/inputs/
+simulation/outputs/
+simulation/data/
+simulation/excel/SMG_v1.0_bench_real.xlsm
+simulation/excel/SMGBench.bas
+simulation/results/real_excel_plan.tsv
