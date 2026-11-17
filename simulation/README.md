@@ -2,19 +2,19 @@
 
 ## Files
 
-- `scripts/real_bench.py`: all steps; see "Run". It times the repository's `cluster.py` and `DAA.py` and reads the maize transcriptome and US adult inputs from the repository's `paper_data/`.
+- `scripts/bench.py`: all steps; see "Run". It times the repository's `cluster.py` and `DAA.py` and reads the maize transcriptome and US adult inputs from the repository's `paper_data/`.
 - `excel/SMG v1.0.xlsm`: the original v1.0 workbook.
 - `data/pbmc68k_10x/`: 10x Genomics 68k PBMC single-cell data; download it, see "Data".
 - `results/`:
-  - `real_python_runs.tsv`: Python run times.
-  - `real_excel_runs.tsv`: Excel run times and checks (timed on an Excel-saved copy of the same inputs, which differs only in rounding).
-  - `real_edges.tsv`: edges below the threshold at each size.
-  - `real_extrapolation.tsv`: extrapolated Excel run times and speed-ups.
+  - `python_runs.tsv`: Python run times.
+  - `excel_runs.tsv`: Excel run times and checks (timed on an Excel-saved copy of the same inputs, which differs only in rounding).
+  - `edges.tsv`: edges below the threshold at each size.
+  - `extrapolation.tsv`: extrapolated Excel run times and speed-ups.
 - Created when the steps run:
   - `inputs/`, `outputs/`.
-  - `excel/SMG_v1.0_bench_real.xlsm`: the benchmark workbook; after the Excel run it holds the run times.
+  - `excel/SMG_v1.0_bench.xlsm`: the benchmark workbook; after the Excel run it holds the run times.
   - `excel/SMGBench.bas`: Excel timing module; it answers the macros' input boxes in place of a user and records each run time.
-  - `results/real_excel_plan.tsv`: Excel run plan and check values.
+  - `results/excel_plan.tsv`: Excel run plan and check values.
 
 ## Data
 
@@ -33,21 +33,21 @@ On macOS, from this folder:
 
 ```bash
 python -m pip install numpy==2.2.6 pandas==2.2.3 numba==0.61.2 openpyxl==3.1.5
-python scripts/real_bench.py prepare    # builds inputs/
-python scripts/real_bench.py excel      # builds the benchmark workbook and results/real_excel_plan.tsv
-python scripts/real_bench.py python     # times the Python scripts; appends to results/real_python_runs.tsv, so move the old table away before re-timing
+python scripts/bench.py prepare    # builds inputs/
+python scripts/bench.py excel      # builds the benchmark workbook and results/excel_plan.tsv
+python scripts/bench.py python     # times the Python scripts; appends to results/python_runs.tsv, so move the old table away before re-timing
 ```
 
 Excel timing:
 
-1. Open `excel/SMG_v1.0_bench_real.xlsm` in Excel and enable macros.
+1. Open `excel/SMG_v1.0_bench.xlsm` in Excel and enable macros.
 2. Tools → Macro → Visual Basic Editor, then File → Import File… and import `excel/SMGBench.bas`.
 3. Tools → Macro → Macros…, run RunSMGBench. Leave Excel alone until "Finished…" appears.
 
 Summary:
 
 ```bash
-python scripts/real_bench.py collect        # reads the Excel run times from the workbook
-python scripts/real_bench.py edges
-python scripts/real_bench.py extrapolate    # needs only the two run-time tables in results/
+python scripts/bench.py collect        # reads the Excel run times from the workbook
+python scripts/bench.py edges
+python scripts/bench.py extrapolate    # needs only the two run-time tables in results/
 ```

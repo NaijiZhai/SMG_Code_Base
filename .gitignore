@@ -6,6 +6,6 @@ output/
 simulation/inputs/
 simulation/outputs/
 simulation/data/
-simulation/excel/SMG_v1.0_bench_real.xlsm
+simulation/excel/SMG_v1.0_bench.xlsm
 simulation/excel/SMGBench.bas
-simulation/results/real_excel_plan.tsv
+simulation/results/excel_plan.tsv

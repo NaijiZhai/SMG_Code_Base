@@ -214,7 +214,7 @@ def excel():
                        changed_lt=int(((d1[iu] < t1) != (d2[iu] < t2)).sum()))
         plan.append(row)
     plan = pd.DataFrame(plan)
-    plan.to_csv(RES / 'real_excel_plan.tsv', sep='\t', index=False)
+    plan.to_csv(RES / 'excel_plan.tsv', sep='\t', index=False)
 
     # benchmark workbook: the original plus the input sheets, the run plan and an empty results sheet
     wb = openpyxl.load_workbook(V1, keep_vba=True)
@@ -233,7 +233,7 @@ def excel():
         for cell in row:
             cell.data_type = 's'
     wb.create_sheet('Bench_results')
-    wb.save(XL / 'SMG_v1.0_bench_real.xlsm')
+    wb.save(XL / 'SMG_v1.0_bench.xlsm')
     # timing module to import into the workbook, crlf line endings
     (XL / 'SMGBench.bas').write_bytes(VBA.replace('\n', '\r\n').encode('ascii'))
     print(plan[['run_id', 'kind', 'otus', 'samples', 'samples2', 'p1', 'edges1_le', 'changed_lt']].to_string(index=False))
@@ -243,7 +243,7 @@ def python():
     # time cluster.py and DAA.py from the command line: start-up, reading, computing and writing
     py = sys.executable
     (gw, gl, gids), (cells, cids) = tables()
-    out = RES / 'real_python_runs.tsv'
+    out = RES / 'python_runs.tsv'
 
     def run(cmd):
         # wall time and peak memory of one run, ru_maxrss in bytes on macOS
@@ -324,18 +324,18 @@ def edges():
                      'edges_lt': e, 'edge_share': e / (m * (m - 1) / 2)})
         print('\t'.join(str(v) for v in rows[-1].values()), flush=True)
         del d
-    pd.DataFrame(rows).to_csv(RES / 'real_edges.tsv', sep='\t', index=False)
+    pd.DataFrame(rows).to_csv(RES / 'edges.tsv', sep='\t', index=False)
 
 
 def collect():
     # excel run times and checks from the workbook, next to python's check values
     import openpyxl
-    rows = list(openpyxl.load_workbook(XL / 'SMG_v1.0_bench_real.xlsm', read_only=True, data_only=True)['Bench_results'].values)
+    rows = list(openpyxl.load_workbook(XL / 'SMG_v1.0_bench.xlsm', read_only=True, data_only=True)['Bench_results'].values)
     res = pd.DataFrame([r[:5] for r in rows[1:] if r[0] is not None], columns=list(rows[0][:5]))
-    both = pd.read_csv(RES / 'real_excel_plan.tsv', sep='\t').merge(res, on='run_id', suffixes=('', '_excel'))
+    both = pd.read_csv(RES / 'excel_plan.tsv', sep='\t').merge(res, on='run_id', suffixes=('', '_excel'))
     both['matrix1_rel_diff'] = (both.matrix1_sum_excel - both.matrix1_sum).abs() / both.matrix1_sum
     both['excel'] = rows[1][5]
-    both.to_csv(RES / 'real_excel_runs.tsv', sep='\t', index=False)
+    both.to_csv(RES / 'excel_runs.tsv', sep='\t', index=False)
     print(both[['run_id', 'kind', 'otus', 'samples', 'seconds', 'matrix1_rel_diff', 'edges1_le', 'edges1_le_excel',
                 'changed_lt', 'compare_edges']].to_string(index=False))
 
@@ -343,8 +343,8 @@ def collect():
 def extrapolate():
     # excel has 16,384 columns and v1.0 keeps the names in column A
     LIMIT = 16383
-    py = pd.read_csv(RES / 'real_python_runs.tsv', sep='\t')
-    xl = pd.read_csv(RES / 'real_excel_runs.tsv', sep='\t')
+    py = pd.read_csv(RES / 'python_runs.tsv', sep='\t')
+    xl = pd.read_csv(RES / 'excel_runs.tsv', sep='\t')
     # v1.0 beyond its largest run: strictly with the square of the size and, for genes, also with the slope of its
     # three largest runs on log-log axes
     rows = []
@@ -377,7 +377,7 @@ def extrapolate():
     # speed-ups: excel time / python time
     for c in ('measured', 'square', 'growth'):
         out['speedup_' + c] = out['excel_' + c] / out.python_seconds
-    out.to_csv(RES / 'real_extrapolation.tsv', sep='\t', index=False)
+    out.to_csv(RES / 'extrapolation.tsv', sep='\t', index=False)
     print(out.to_string(index=False))
 
 
